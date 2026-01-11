@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "id": "sword_wood",
+      "name": "나무 검",
+      "type": "weapon",
+      "slot": "weapon",
+      "stackable": false,
+      "stats": {
+        "attack": 5
+      },
+      "attackType": "melee",
+      "range": 50,
+      "description": "초보자용 나무 검."
+    },
+    {
+      "id": "sword_iron",
+      "name": "철 검",
+      "type": "weapon",
+      "slot": "weapon",
+      "stackable": false,
+      "stats": {
+        "attack": 10
+      },
+      "attackType": "melee",
+      "range": 55,
+      "description": "단단한 철로 만든 검."
+    },
+    {
+      "id": "bow_short",
+      "name": "단궁",
+      "type": "weapon",
+      "slot": "weapon",
+      "stackable": false,
+      "stats": {
+        "attack": 7
+      },
+      "attackType": "ranged",
+      "range": 200,
+      "projectileSpeed": 300,
+      "description": "가벼운 단궁."
+    },
+    {
+      "id": "staff_magic",
+      "name": "마법 지팡이",
+      "type": "weapon",
+      "slot": "weapon",
+      "stackable": false,
+      "stats": {
+        "attack": 8
+      },
+      "attackType": "ranged",
+      "range": 180,
+      "projectileSpeed": 250,
+      "projectileCount": 2,
+      "description": "마법 탄환을 2발 동시에 발사한다."
+    }
+  ]
+}

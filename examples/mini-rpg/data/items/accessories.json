@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "id": "ring_agility",
+      "name": "민첩의 반지",
+      "type": "accessory",
+      "slot": "accessory",
+      "stackable": false,
+      "stats": {
+        "speedBonus": 0.1
+      },
+      "description": "이동속도가 10% 증가한다."
+    },
+    {
+      "id": "necklace_life",
+      "name": "생명의 목걸이",
+      "type": "accessory",
+      "slot": "accessory",
+      "stackable": false,
+      "stats": {
+        "maxHpBonus": 20
+      },
+      "description": "최대 HP가 20 증가한다."
+    }
+  ]
+}

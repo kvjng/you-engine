@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini RPG Tests</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #eee; }
+    .pass { color: #4f4; }
+    .fail { color: #f44; }
+    .suite { margin: 10px 0; padding: 10px; background: #222; border-radius: 4px; }
+    .test { margin-left: 20px; }
+    h2 { margin: 0 0 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>Mini RPG Unit Tests</h1>
+  <div id="results"></div>
+
+  <script type="module">
+    const results = document.getElementById('results')
+    let passed = 0, failed = 0
+
+    function describe(name, fn) {
+      const suite = document.createElement('div')
+      suite.className = 'suite'
+      suite.innerHTML = `<h2>${name}</h2>`
+      results.appendChild(suite)
+      window._currentSuite = suite
+      fn()
+    }
+
+    function it(name, fn) {
+      const test = document.createElement('div')
+      test.className = 'test'
+      try {
+        fn()
+        test.innerHTML = `<span class="pass">✓</span> ${name}`
+        passed++
+      } catch (e) {
+        test.innerHTML = `<span class="fail">✗</span> ${name}<br><small style="color:#f88;margin-left:20px">${e.message}</small>`
+        failed++
+      }
+      window._currentSuite.appendChild(test)
+    }
+
+    function expect(actual) {
+      return {
+        toBe(expected) {
+          if (actual !== expected) throw new Error(`Expected ${expected}, got ${actual}`)
+        },
+        toEqual(expected) {
+          if (JSON.stringify(actual) !== JSON.stringify(expected))
+            throw new Error(`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`)
+        },
+        toBeNull() {
+          if (actual !== null) throw new Error(`Expected null, got ${actual}`)
+        },
+        toBeGreaterThanOrEqual(expected) {
+          if (actual < expected) throw new Error(`Expected ${actual} >= ${expected}`)
+        },
+        toBeLessThanOrEqual(expected) {
+          if (actual > expected) throw new Error(`Expected ${actual} <= ${expected}`)
+        },
+        toBeCloseTo(expected, precision = 2) {
+          const diff = Math.abs(actual - expected)
+          if (diff > Math.pow(10, -precision)) throw new Error(`Expected ${actual} to be close to ${expected}`)
+        }
+      }
+    }
+
+    // Import and run tests
+    import { ItemManager } from '../scripts/services/item-manager.js'
+    import { DropTable } from '../scripts/services/drop-table.js'
+    import { Inventory } from '../scripts/components/inventory.js'
+    import { Equipment } from '../scripts/components/equipment.js'
+
+    // ItemManager Tests
+    describe('ItemManager', () => {
+      it('should register and get item', () => {
+        const mgr = new ItemManager()
+        const item = { id: 'test', name: 'Test', type: 'consumable' }
+        mgr.registerItem(item)
+        expect(mgr.getItem('test')).toEqual(item)
+      })
+
+      it('should return null for unknown item', () => {
+        const mgr = new ItemManager()
+        expect(mgr.getItem('unknown')).toBeNull()
+      })
+
+      it('should load items from array', () => {
+        const mgr = new ItemManager()
+        const items = [
+          { id: 'item1', name: 'Item 1', type: 'consumable' },
+          { id: 'item2', name: 'Item 2', type: 'weapon' }
+        ]
+        mgr.loadItems(items)
+        expect(mgr.getItem('item1')).toEqual(items[0])
+        expect(mgr.getItem('item2')).toEqual(items[1])
+      })
+
+      it('should get items by type', () => {
+        const mgr = new ItemManager()
+        mgr.loadItems([
+          { id: 'item1', type: 'consumable' },
+          { id: 'item2', type: 'weapon' },
+          { id: 'item3', type: 'consumable' }
+        ])
+        expect(mgr.getItemsByType('consumable').length).toBe(2)
+      })
+    })
+
+    // DropTable Tests
+    describe('DropTable', () => {
+      it('should register and get table', () => {
+        const dt = new DropTable()
+        const table = { drops: [{ itemId: 'potion', chance: 0.5 }] }
+        dt.registerTable('monster1', table)
+        expect(dt.getTable('monster1')).toEqual(table)
+      })
+
+      it('should return empty array for unknown table', () => {
+        const dt = new DropTable()
+        expect(dt.roll('unknown').length).toBe(0)
+      })
+
+      it('should always drop when chance is 1.0', () => {
+        const dt = new DropTable()
+        dt.registerTable('test', { drops: [{ itemId: 'potion', chance: 1.0, minCount: 1, maxCount: 1 }] })
+        const drops = dt.roll('test')
+        expect(drops.length).toBe(1)
+        expect(drops[0].itemId).toBe('potion')
+      })
+    })
+
+    // Inventory Tests
+    describe('Inventory', () => {
+      it('should initialize with correct slot count', () => {
+        const inv = new Inventory({ maxSlots: 10 })
+        expect(inv.maxSlots).toBe(10)
+        expect(inv.usedSlots).toBe(0)
+      })
+
+      it('should add non-stackable item', () => {
+        const inv = new Inventory({ maxSlots: 10 })
+        const result = inv.addItem('sword', 1, { stackable: false })
+        expect(result).toBe(true)
+        expect(inv.usedSlots).toBe(1)
+      })
+
+      it('should stack stackable items', () => {
+        const inv = new Inventory({ maxSlots: 10 })
+        inv.addItem('potion', 5, { stackable: true, maxStack: 99 })
+        inv.addItem('potion', 3, { stackable: true, maxStack: 99 })
+        expect(inv.getItemCount('potion')).toBe(8)
+        expect(inv.usedSlots).toBe(1)
+      })
+
+      it('should expand slots', () => {
+        const inv = new Inventory({ maxSlots: 10 })
+        inv.expandSlots(5)
+        expect(inv.maxSlots).toBe(15)
+      })
+    })
+
+    // Equipment Tests
+    describe('Equipment', () => {
+      it('should have empty slots initially', () => {
+        const eq = new Equipment()
+        expect(eq.getSlot('weapon')).toBeNull()
+        expect(eq.getSlot('armor')).toBeNull()
+        expect(eq.getSlot('accessory')).toBeNull()
+      })
+
+      it('should equip item', () => {
+        const eq = new Equipment()
+        const weapon = { id: 'sword', slot: 'weapon', stats: { attack: 5 } }
+        const result = eq.equip(weapon)
+        expect(result.success).toBe(true)
+        expect(eq.getSlot('weapon')).toEqual(weapon)
+      })
+
+      it('should return previous item when replacing', () => {
+        const eq = new Equipment()
+        const sword1 = { id: 'sword1', slot: 'weapon' }
+        const sword2 = { id: 'sword2', slot: 'weapon' }
+        eq.equip(sword1)
+        const result = eq.equip(sword2)
+        expect(result.unequipped).toEqual(sword1)
+      })
+
+      it('should calculate total bonus', () => {
+        const eq = new Equipment()
+        eq.equip({ id: 'sword', slot: 'weapon', stats: { attack: 10 } })
+        eq.equip({ id: 'armor', slot: 'armor', stats: { defense: 5 } })
+        const bonus = eq.getTotalBonus()
+        expect(bonus.attack).toBe(10)
+        expect(bonus.defense).toBe(5)
+      })
+    })
+
+    // Summary
+    const summary = document.createElement('div')
+    summary.style.marginTop = '20px'
+    summary.style.padding = '10px'
+    summary.style.background = '#333'
+    summary.innerHTML = `<strong>Total: ${passed + failed}</strong> | <span class="pass">Passed: ${passed}</span> | <span class="fail">Failed: ${failed}</span>`
+    results.appendChild(summary)
+  </script>
+</body>
+</html>

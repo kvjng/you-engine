@@ -1,0 +1,51 @@
+{
+  "items": [
+    {
+      "id": "potion_small",
+      "name": "작은 HP 포션",
+      "type": "consumable",
+      "stackable": true,
+      "maxStack": 99,
+      "effect": {
+        "type": "heal",
+        "value": 30
+      },
+      "description": "HP를 30 회복한다."
+    },
+    {
+      "id": "potion_medium",
+      "name": "중간 HP 포션",
+      "type": "consumable",
+      "stackable": true,
+      "maxStack": 99,
+      "effect": {
+        "type": "heal",
+        "value": 60
+      },
+      "description": "HP를 60 회복한다."
+    },
+    {
+      "id": "potion_large",
+      "name": "큰 HP 포션",
+      "type": "consumable",
+      "stackable": true,
+      "maxStack": 99,
+      "effect": {
+        "type": "heal",
+        "value": 100
+      },
+      "description": "HP를 100 회복한다."
+    },
+    {
+      "id": "bag_small",
+      "name": "작은 가방",
+      "type": "consumable",
+      "stackable": false,
+      "effect": {
+        "type": "expand_inventory",
+        "value": 5
+      },
+      "description": "인벤토리 슬롯을 5칸 확장한다."
+    }
+  ]
+}
