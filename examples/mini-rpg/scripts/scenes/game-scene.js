@@ -17,6 +17,9 @@ import { FOREST_MAP } from '../data/maps.js'
 import { HUD } from '../ui/hud.js'
 import { InventoryUI } from '../ui/inventory-ui.js'
 import { GameOverScene } from './gameover-scene.js'
+import { ProjectilePool } from '../services/projectile-pool.js'
+import { ProjectileSystem } from '../components/projectile-system.js'
+import { ProjectileRenderer } from '../components/projectile-renderer.js'
 
 export class GameScene extends Scene {
   willCreate() {
@@ -24,9 +27,13 @@ export class GameScene extends Scene {
     this.respawnTimer = 0
     this.respawnInterval = 5 // 5초마다 리스폰 체크
     this.maxEnemies = 10
-    // 외부에서 주입됨 (game.js에서)
-    this.itemManager = null
-    this.dropTable = null
+    // 외부에서 주입됨 (game.js에서) - 이미 주입된 경우 유지
+    this.itemManager = this.itemManager ?? null
+    this.dropTable = this.dropTable ?? null
+    // 투사체 시스템
+    this.projectilePool = null
+    this.projectileSystem = null
+    this.projectileRenderer = null
   }
 
   didCreate() {
@@ -71,6 +78,46 @@ export class GameScene extends Scene {
     this.inventoryUI = new InventoryUI()
     this.inventoryUI.setPlayer(player)
     this.add(this.inventoryUI)
+
+    // 투사체 시스템 초기화
+    this.projectilePool = new ProjectilePool({ maxSize: 100 })
+    this.projectileSystem = new ProjectileSystem({ pool: this.projectilePool })
+    this.projectileRenderer = new ProjectileRenderer()
+
+    // 투사체 충돌 이벤트
+    this.projectileSystem.event.on('hit', (data) => {
+      this.onProjectileHit(data)
+    })
+
+    // 플레이어 원거리 공격 이벤트
+    const playerAttack = this.player.findComponent(AttackController)
+    playerAttack.event.on('rangedAttack', (configs) => {
+      for (const config of configs) {
+        this.projectileSystem.fire(config)
+      }
+    })
+
+    // 시작 아이템 지급
+    this.giveStarterItems()
+  }
+
+  giveStarterItems() {
+    if (!this.itemManager) return
+
+    const inventory = this.player.findComponent(Inventory)
+    const starterItems = [
+      { id: 'bow_short', count: 1 },
+      { id: 'staff_magic', count: 1 },
+      { id: 'sword_wood', count: 1 },
+      { id: 'potion_hp_small', count: 3 }
+    ]
+
+    for (const item of starterItems) {
+      const itemData = this.itemManager.getItem(item.id)
+      if (itemData) {
+        inventory.addItem(item.id, item.count, itemData)
+      }
+    }
   }
 
   spawnStructures(count = 30) {
@@ -171,6 +218,42 @@ export class GameScene extends Scene {
       }
     }
 
+    // 플레이어 방향 업데이트
+    this.updatePlayerFacingDirection()
+
+    // 투사체 업데이트
+    if (this.projectileSystem) {
+      this.projectileSystem.update(deltaTime)
+
+      // 적 대상 충돌 체크
+      const enemies = this.objects.filter(obj => obj.tags.has('enemy'))
+      const enemyTargets = enemies.map(e => {
+        const stats = e.findComponent(Stats)
+        return {
+          position: e.position,
+          alive: stats?.alive ?? true,
+          findComponent: e.findComponent.bind(e),
+          tags: e.tags,
+          isEnemy: true,
+          radius: 16,
+          expReward: e.expReward
+        }
+      })
+      this.projectileSystem.checkCollisions(enemyTargets, 'player')
+
+      // 플레이어 대상 충돌 체크 (몬스터 투사체용)
+      const playerStats = this.player.findComponent(Stats)
+      const playerTarget = [{
+        position: this.player.position,
+        alive: playerStats?.alive ?? true,
+        findComponent: this.player.findComponent.bind(this.player),
+        tags: this.player.tags,
+        isPlayer: true,
+        radius: 16
+      }]
+      this.projectileSystem.checkCollisions(playerTarget, 'enemy')
+    }
+
     // 죽은 적 제거
     this.removeDeadEnemies()
 
@@ -196,6 +279,18 @@ export class GameScene extends Scene {
     })
   }
 
+  updatePlayerFacingDirection() {
+    const playerController = this.player.findComponent(PlayerController)
+    const attackController = this.player.findComponent(AttackController)
+
+    if (playerController && attackController) {
+      const dir = playerController.direction
+      if (dir[0] !== 0 || dir[1] !== 0) {
+        attackController.setFacingDirection(dir[0], dir[1])
+      }
+    }
+  }
+
   playerAttack() {
     const attackController = this.player.findComponent(AttackController)
     const enemies = this.objects.filter(obj => obj.tags.has('enemy'))
@@ -203,8 +298,8 @@ export class GameScene extends Scene {
 
     for (const result of results) {
       if (result.type === 'ranged') {
-        // 원거리 공격 - 임시로 범위 내 첫 적 공격
-        this.handleRangedAttack(result, enemies)
+        // 원거리 공격 - 투사체 발사는 이벤트로 처리됨
+        // 아무것도 하지 않음
       } else {
         // 근접 공격 결과
         this.handleMeleeHit(result)
@@ -228,36 +323,36 @@ export class GameScene extends Scene {
     }
   }
 
-  handleRangedAttack(attackData, enemies) {
-    // Phase 2 전까지 임시 구현: 범위 내 첫 번째 적 공격
-    const pos = this.player.position
-    const playerStats = this.player.findComponent(Stats)
+  onProjectileHit(data) {
+    const { target, damage } = data
 
-    for (const enemy of enemies) {
-      const targetPos = enemy.position
-      const dx = targetPos[0] - pos[0]
-      const dy = targetPos[1] - pos[1]
-      const distance = Math.sqrt(dx * dx + dy * dy)
+    const targetStats = target.findComponent(Stats)
+    if (targetStats && targetStats.alive) {
+      targetStats.takeDamage(damage)
 
-      if (distance <= attackData.range) {
-        const targetStats = enemy.findComponent(Stats)
-        if (targetStats && targetStats.alive) {
-          const damage = targetStats.takeDamage(attackData.damage)
-          console.log(`Ranged hit ${enemy.name} for ${damage} damage`)
-
-          const renderer = enemy.findComponent(ShapeRenderer)
-          if (renderer) {
-            renderer.flash('#ffffff', 0.1)
-          }
-
-          if (!targetStats.alive) {
-            playerStats.addExp(enemy.expReward || 10)
-          }
-
-          // 한 명만 공격 (투사체 구현 전까지)
-          break
-        }
+      // 피격 효과
+      const renderer = target.findComponent(ShapeRenderer)
+      if (renderer) {
+        renderer.flash('#ffffff', 0.1)
       }
+
+      // 사망 처리 (적인 경우)
+      if (!targetStats.alive && target.isEnemy) {
+        const playerStats = this.player.findComponent(Stats)
+        playerStats.addExp(target.expReward || 10)
+      }
+    }
+  }
+
+  didRender(context, screen) {
+    // 투사체 렌더링 (카메라 변환 적용)
+    if (this.projectileRenderer && this.projectileSystem && this.camera) {
+      context.save()
+      context.translate(screen.width / 2, screen.height / 2)
+      context.scale(...this.camera.scale)
+      context.translate(-Math.floor(this.camera.position[0]), -Math.floor(this.camera.position[1]))
+      this.projectileRenderer.render(context, this.projectileSystem.getActiveProjectiles())
+      context.restore()
     }
   }
 

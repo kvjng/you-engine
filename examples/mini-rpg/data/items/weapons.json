@@ -38,6 +38,11 @@
       "attackType": "ranged",
       "range": 200,
       "projectileSpeed": 300,
+      "projectile": {
+        "size": 6,
+        "color": "#8B4513",
+        "piercing": false
+      },
       "description": "가벼운 단궁."
     },
     {
@@ -53,6 +58,12 @@
       "range": 180,
       "projectileSpeed": 250,
       "projectileCount": 2,
+      "projectile": {
+        "size": 10,
+        "color": "#9966ff",
+        "piercing": false,
+        "spreadAngle": 15
+      },
       "description": "마법 탄환을 2발 동시에 발사한다."
     }
   ]
