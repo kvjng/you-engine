@@ -93,7 +93,9 @@ You.run({
   4. 완료 후 `develop`으로 머지
 - **세션 독립성**: 여러 세션에서 작업할 수 있으므로, 항상 `develop`을 기준으로 새 브랜치 생성
 
-### 코드 리뷰
+### Pull Request
+- **PR 생성 시 base 브랜치**: 반드시 `develop` (main이 아님)
+- **PR 생성 명령어**: `gh pr create --base develop`
 - **혼합 방식** - 중요한 변경은 PR, 작은 변경은 대화에서 리뷰
 - **PR 기준**: API 변경, 핵심 로직 변경
 
