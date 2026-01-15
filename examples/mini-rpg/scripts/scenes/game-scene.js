@@ -339,12 +339,12 @@ export class GameScene extends Scene {
   }
 
   didRender(context, screen) {
-    // 투사체 렌더링
-    if (this.projectileRenderer && this.projectileSystem) {
+    // 투사체 렌더링 (카메라 변환 적용)
+    if (this.projectileRenderer && this.projectileSystem && this.camera) {
       context.save()
-      if (this.camera) {
-        this.camera.apply(context)
-      }
+      context.translate(screen.width / 2, screen.height / 2)
+      context.scale(...this.camera.scale)
+      context.translate(-Math.floor(this.camera.position[0]), -Math.floor(this.camera.position[1]))
       this.projectileRenderer.render(context, this.projectileSystem.getActiveProjectiles())
       context.restore()
     }
