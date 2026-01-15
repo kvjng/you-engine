@@ -27,9 +27,9 @@ export class GameScene extends Scene {
     this.respawnTimer = 0
     this.respawnInterval = 5 // 5초마다 리스폰 체크
     this.maxEnemies = 10
-    // 외부에서 주입됨 (game.js에서)
-    this.itemManager = null
-    this.dropTable = null
+    // 외부에서 주입됨 (game.js에서) - 이미 주입된 경우 유지
+    this.itemManager = this.itemManager ?? null
+    this.dropTable = this.dropTable ?? null
     // 투사체 시스템
     this.projectilePool = null
     this.projectileSystem = null
