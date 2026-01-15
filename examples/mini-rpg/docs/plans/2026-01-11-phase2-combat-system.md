@@ -969,7 +969,69 @@ git commit -m "feat(mini-rpg): GameScene에 투사체 시스템 통합"
 
 ---
 
-## Task 7: 무기 스킬 시스템 생성
+## Task 7: 최종 테스트 및 정리
+
+**Files:**
+- Review: Phase 2 관련 파일들
+
+**Step 1: 전체 테스트 실행**
+
+```bash
+pnpm test examples/mini-rpg/tests/projectile-pool.test.js
+pnpm test examples/mini-rpg/tests/projectile-system.test.js
+```
+
+Expected: 모든 테스트 PASS
+
+**Step 2: 브라우저 통합 테스트**
+
+체크리스트:
+- [ ] 단궁 장착 후 공격 - 투사체 발사
+- [ ] 마법 지팡이 장착 - 2발 동시 발사
+- [ ] 투사체 적 명중 시 데미지
+- [ ] 투사체 사거리 초과 시 사라짐
+- [ ] 투사체 트레일 효과 표시
+
+**Step 3: 코드 정리**
+
+- console.log 정리
+- 미사용 import 제거
+- handleRangedAttack 임시 코드 완전 제거
+
+**Step 4: 최종 Commit**
+
+```bash
+git add examples/mini-rpg/
+git commit -m "feat(mini-rpg): Phase 2 투사체 시스템 완성"
+```
+
+---
+
+## 파일 구조 (Phase 2 완료 후)
+
+```
+examples/mini-rpg/
+├── scripts/
+│   ├── components/
+│   │   ├── attack-controller.js (수정 - facingDirection, EventEmitter)
+│   │   ├── projectile-renderer.js (신규)
+│   │   └── projectile-system.js (신규)
+│   ├── scenes/
+│   │   └── game-scene.js (수정 - 투사체 시스템 통합)
+│   └── services/
+│       └── projectile-pool.js (신규)
+└── tests/
+    ├── projectile-pool.test.js (신규)
+    └── projectile-system.test.js (신규)
+```
+
+---
+
+# Phase 2.5: 무기 스킬 + 몬스터 확장 (별도 계획서로 분리 예정)
+
+> 아래 Task들은 Phase 2 완료 후 별도 계획서로 작성 예정
+
+## [Phase 2.5] Task 1: 무기 스킬 시스템 생성
 
 **Files:**
 - Create: `examples/mini-rpg/scripts/components/weapon-skill.js`
