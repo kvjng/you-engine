@@ -227,19 +227,25 @@ export class GameScene extends Scene {
 
       // 적 대상 충돌 체크
       const enemies = this.objects.filter(obj => obj.tags.has('enemy'))
-      const enemyTargets = enemies.map(e => ({
-        position: e.position,
-        findComponent: e.findComponent.bind(e),
-        tags: e.tags,
-        isEnemy: true,
-        radius: 16,
-        expReward: e.expReward
-      }))
+      const enemyTargets = enemies.map(e => {
+        const stats = e.findComponent(Stats)
+        return {
+          position: e.position,
+          alive: stats?.alive ?? true,
+          findComponent: e.findComponent.bind(e),
+          tags: e.tags,
+          isEnemy: true,
+          radius: 16,
+          expReward: e.expReward
+        }
+      })
       this.projectileSystem.checkCollisions(enemyTargets, 'player')
 
       // 플레이어 대상 충돌 체크 (몬스터 투사체용)
+      const playerStats = this.player.findComponent(Stats)
       const playerTarget = [{
         position: this.player.position,
+        alive: playerStats?.alive ?? true,
         findComponent: this.player.findComponent.bind(this.player),
         tags: this.player.tags,
         isPlayer: true,

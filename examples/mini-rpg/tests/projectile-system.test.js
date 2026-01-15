@@ -144,7 +144,7 @@ describe('ProjectileSystem', () => {
       const targets = [{
         position: [120, 100],
         radius: 20,
-        findComponent: () => ({ alive: true })
+        alive: true
       }]
 
       system.checkCollisions(targets, 'player')
@@ -167,7 +167,7 @@ describe('ProjectileSystem', () => {
       const targets = [{
         position: [110, 100],
         radius: 20,
-        findComponent: () => ({ alive: true })
+        alive: true
       }]
 
       system.checkCollisions(targets, 'player')
@@ -188,7 +188,7 @@ describe('ProjectileSystem', () => {
       const targets = [{
         position: [110, 100],
         radius: 20,
-        findComponent: () => ({ alive: true })
+        alive: true
       }]
 
       system.checkCollisions(targets, 'player')
@@ -211,7 +211,7 @@ describe('ProjectileSystem', () => {
       const targets = [{
         position: [110, 100],
         radius: 20,
-        findComponent: () => ({ alive: true })
+        alive: true
       }]
 
       // Check collisions filtering by enemy owner - should not hit
@@ -235,7 +235,7 @@ describe('ProjectileSystem', () => {
       const targets = [{
         position: [110, 100],
         radius: 20,
-        findComponent: () => ({ alive: false })
+        alive: false
       }]
 
       system.checkCollisions(targets, 'player')

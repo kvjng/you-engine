@@ -45,8 +45,7 @@ export class ProjectileSystem {
 
       for (const target of targets) {
         // Check if target is alive
-        const stats = target.findComponent('Stats')
-        if (stats && !stats.alive) continue
+        if (!target.alive) continue
 
         // Circle collision check
         const dx = target.position[0] - p.x
