@@ -20,11 +20,12 @@
 - 투사체 관리: 풀링 구현 (성능 최적화)
 - 스킬 쿨다운: 무기별 쿨다운
 
-**Phase 1 의존성:**
-- Equipment 컴포넌트 (장비 장착/해제)
-- Stats 컴포넌트 (장비 보너스 연동)
-- AttackController (공격 타입 분기 기초)
-- weapons.json (무기 데이터)
+**Phase 1 구현 완료 (의존성 충족):**
+- ✅ Equipment 컴포넌트 (`scripts/components/equipment.js`)
+- ✅ Stats 컴포넌트 장비 보너스 연동
+- ✅ AttackController 공격 타입 분기 (`attackType: 'ranged'` 지원)
+- ✅ weapons.json에 `projectileSpeed`, `projectileCount` 속성
+- ⚠️ 원거리 공격 임시 구현 (`handleRangedAttack` - 투사체 없이 즉시 타격)
 
 ---
 
@@ -711,174 +712,98 @@ git commit -m "feat(mini-rpg): 무기 데이터에 투사체/스킬 속성 추�
 
 ---
 
-## Task 5: AttackController 원거리 공격 완성
+## Task 5: AttackController에 facingDirection 및 이벤트 추가
 
 **Files:**
-- Modify: `examples/mini-rpg/scripts/components/attack-controller.js`
+- Modify: `examples/mini-rpg/scripts/components/attack-controller.js:1-106`
 
-**Step 1: AttackController에 투사체 발사 로직 추가**
+**현재 상태:** AttackController가 이미 원거리/근접 분기를 지원하지만, `facingDirection`과 `EventEmitter`가 없음
+
+**Step 1: EventEmitter import 및 facingDirection 추가**
+
+attack-controller.js 상단에 EventEmitter import 추가:
+```javascript
+import { EventEmitter } from '../../../../you/utilities/event.js'
+```
+
+constructor에 추가:
+```javascript
+this._facingDirection = [1, 0] // 기본 오른쪽
+this.event = new EventEmitter(this)
+```
+
+**Step 2: facingDirection getter/setter 추가**
 
 ```javascript
-// attack-controller.js 수정
-import { Component } from '../../../../you/component.js'
-import { Stats } from './stats.js'
-import { Equipment } from './equipment.js'
-import { EventEmitter } from '../../../../you/utilities/event.js'
+get facingDirection() { return this._facingDirection }
 
-export class AttackController extends Component {
-  constructor({
-    baseRange = 50,
-    baseCooldown = 0.5
-  } = {}) {
-    super()
-    this.baseRange = baseRange
-    this.baseCooldown = baseCooldown
-    this._cooldownTimer = 0
-    this._attacking = false
-    this._attackDuration = 0.15
-    this._attackTimer = 0
-    this._facingDirection = [1, 0] // 기본 오른쪽
-    this.event = new EventEmitter(this)
-  }
-
-  get range() {
-    const weapon = this.weaponData
-    return weapon?.range || this.baseRange
-  }
-
-  get cooldown() {
-    return this.baseCooldown
-  }
-
-  get attackType() {
-    const weapon = this.weaponData
-    return weapon?.attackType || 'melee'
-  }
-
-  get weaponData() {
-    const equipment = this.object?.findComponent(Equipment)
-    return equipment?.getSlot('weapon')
-  }
-
-  get canAttack() { return this._cooldownTimer <= 0 }
-  get attacking() { return this._attacking }
-  get facingDirection() { return this._facingDirection }
-
-  setFacingDirection(dirX, dirY) {
-    const length = Math.sqrt(dirX * dirX + dirY * dirY)
-    if (length > 0) {
-      this._facingDirection = [dirX / length, dirY / length]
-    }
-  }
-
-  attack(targets = []) {
-    if (!this.canAttack) return []
-
-    this._cooldownTimer = this.cooldown
-    this._attacking = true
-    this._attackTimer = this._attackDuration
-
-    const stats = this.object.findComponent(Stats)
-    const weapon = this.weaponData
-
-    if (this.attackType === 'ranged') {
-      return this.prepareRangedAttack(stats, weapon)
-    }
-
-    return this.performMeleeAttack(targets, stats)
-  }
-
-  performMeleeAttack(targets, stats) {
-    const pos = this.object.position
-    const hits = []
-
-    for (const target of targets) {
-      const targetPos = target.position
-      const dx = targetPos[0] - pos[0]
-      const dy = targetPos[1] - pos[1]
-      const distance = Math.sqrt(dx * dx + dy * dy)
-
-      if (distance <= this.range) {
-        const targetStats = target.findComponent(Stats)
-        if (targetStats && targetStats.alive) {
-          const damage = targetStats.takeDamage(stats.totalAttack)
-          hits.push({ target, damage })
-        }
-      }
-    }
-
-    this.event.emit('meleeAttack', hits)
-    return hits
-  }
-
-  prepareRangedAttack(stats, weapon) {
-    const projectileData = weapon?.projectile || {}
-    const pos = this.object.position
-    const dir = this._facingDirection
-
-    const baseConfig = {
-      x: pos[0],
-      y: pos[1],
-      damage: stats.totalAttack,
-      speed: projectileData.speed || 300,
-      range: this.range,
-      piercing: projectileData.piercing || false,
-      owner: this.object.tags?.has('player') ? 'player' : 'enemy',
-      size: projectileData.size || 8,
-      color: projectileData.color || '#ffff44'
-    }
-
-    const projectileConfigs = []
-    const count = projectileData.count || 1
-    const spreadAngle = (projectileData.spreadAngle || 0) * Math.PI / 180
-
-    if (count === 1) {
-      projectileConfigs.push({
-        ...baseConfig,
-        dirX: dir[0],
-        dirY: dir[1]
-      })
-    } else {
-      // 다중 발사: 부채꼴 배치
-      const startAngle = -spreadAngle * (count - 1) / 2
-      const baseAngle = Math.atan2(dir[1], dir[0])
-
-      for (let i = 0; i < count; i++) {
-        const angle = baseAngle + startAngle + spreadAngle * i
-        projectileConfigs.push({
-          ...baseConfig,
-          dirX: Math.cos(angle),
-          dirY: Math.sin(angle)
-        })
-      }
-    }
-
-    this.event.emit('rangedAttack', projectileConfigs)
-    return [{ type: 'ranged', projectiles: projectileConfigs }]
-  }
-
-  didUpdate(deltaTime) {
-    if (this._cooldownTimer > 0) {
-      this._cooldownTimer -= deltaTime
-    }
-
-    if (this._attacking) {
-      this._attackTimer -= deltaTime
-      if (this._attackTimer <= 0) {
-        this._attacking = false
-      }
-    }
+setFacingDirection(dirX, dirY) {
+  const length = Math.sqrt(dirX * dirX + dirY * dirY)
+  if (length > 0) {
+    this._facingDirection = [dirX / length, dirY / length]
   }
 }
 ```
 
-**Step 2: 브라우저에서 확인 (다음 Task에서 통합)**
+**Step 3: prepareRangedAttack 수정 - 투사체 config 생성 및 이벤트 발생**
 
-**Step 3: Commit**
+기존 `prepareRangedAttack` 메서드를 다음으로 교체:
+```javascript
+prepareRangedAttack(stats) {
+  const weapon = this.weaponData
+  const pos = this.object.position
+  const dir = this._facingDirection
+
+  const baseConfig = {
+    x: pos[0],
+    y: pos[1],
+    damage: stats.totalAttack,
+    speed: weapon?.projectileSpeed || 300,
+    range: this.range,
+    piercing: weapon?.projectile?.piercing || false,
+    owner: this.object.tags?.has('player') ? 'player' : 'enemy',
+    size: weapon?.projectile?.size || 8,
+    color: weapon?.projectile?.color || '#ffff44'
+  }
+
+  const projectileConfigs = []
+  const count = weapon?.projectileCount || 1
+  const spreadAngle = (weapon?.projectile?.spreadAngle || 15) * Math.PI / 180
+
+  if (count === 1) {
+    projectileConfigs.push({ ...baseConfig, dirX: dir[0], dirY: dir[1] })
+  } else {
+    const startAngle = -spreadAngle * (count - 1) / 2
+    const baseAngle = Math.atan2(dir[1], dir[0])
+    for (let i = 0; i < count; i++) {
+      const angle = baseAngle + startAngle + spreadAngle * i
+      projectileConfigs.push({
+        ...baseConfig,
+        dirX: Math.cos(angle),
+        dirY: Math.sin(angle)
+      })
+    }
+  }
+
+  this.event.emit('rangedAttack', projectileConfigs)
+  return [{ type: 'ranged', projectiles: projectileConfigs }]
+}
+```
+
+**Step 4: 테스트 (브라우저 콘솔)**
+
+```javascript
+// 플레이어 AttackController에서 이벤트 확인
+const player = scene.player
+const ac = player.findComponent(AttackController)
+ac.event.on('rangedAttack', (configs) => console.log('Ranged:', configs))
+```
+
+**Step 5: Commit**
 
 ```bash
-git add examples/mini-rpg/scripts/components/
-git commit -m "feat(mini-rpg): AttackController 원거리 공격 완성"
+git add examples/mini-rpg/scripts/components/attack-controller.js
+git commit -m "feat(mini-rpg): AttackController에 facingDirection 및 이벤트 추가"
 ```
 
 ---
@@ -886,154 +811,159 @@ git commit -m "feat(mini-rpg): AttackController 원거리 공격 완성"
 ## Task 6: GameScene에 투사체 시스템 통합
 
 **Files:**
-- Modify: `examples/mini-rpg/scripts/scenes/game-scene.js`
+- Modify: `examples/mini-rpg/scripts/scenes/game-scene.js:1-398`
 
-**Step 1: GameScene에 투사체 시스템 추가**
+**현재 상태:** `handleRangedAttack`이 임시로 투사체 없이 즉시 타격 처리 중
 
+**Step 1: import 추가**
+
+game-scene.js 상단에 추가:
 ```javascript
-// game-scene.js 수정
-import { Scene } from '../../../../you/scene.js'
 import { ProjectilePool } from '../services/projectile-pool.js'
 import { ProjectileSystem } from '../components/projectile-system.js'
 import { ProjectileRenderer } from '../components/projectile-renderer.js'
-import { AttackController } from '../components/attack-controller.js'
-import { Stats } from '../components/stats.js'
-// ... 기존 import
+```
 
-export class GameScene extends Scene {
-  didCreate() {
-    // ... 기존 코드
+**Step 2: willCreate에 투사체 시스템 초기화 변수 추가**
 
-    // 투사체 시스템 초기화
-    this.projectilePool = new ProjectilePool({ maxSize: 100 })
-    this.projectileSystem = new ProjectileSystem({ pool: this.projectilePool })
-    this.projectileRenderer = new ProjectileRenderer()
+```javascript
+willCreate() {
+  // ... 기존 코드
+  this.projectilePool = null
+  this.projectileSystem = null
+  this.projectileRenderer = null
+}
+```
 
-    // 투사체 충돌 이벤트 핸들링
-    this.projectileSystem.event.on('hit', (data) => {
-      this.onProjectileHit(data)
-    })
+**Step 3: didCreate에 투사체 시스템 초기화**
 
-    // 플레이어 원거리 공격 이벤트
-    const playerAttack = this.player.findComponent(AttackController)
-    playerAttack.event.on('rangedAttack', (configs) => {
-      for (const config of configs) {
-        this.projectileSystem.fire(config)
-      }
-    })
+didCreate 끝에 추가:
+```javascript
+// 투사체 시스템 초기화
+this.projectilePool = new ProjectilePool({ maxSize: 100 })
+this.projectileSystem = new ProjectileSystem({ pool: this.projectilePool })
+this.projectileRenderer = new ProjectileRenderer()
+
+// 투사체 충돌 이벤트
+this.projectileSystem.event.on('hit', (data) => {
+  this.onProjectileHit(data)
+})
+
+// 플레이어 원거리 공격 이벤트
+const playerAttack = this.player.findComponent(AttackController)
+playerAttack.event.on('rangedAttack', (configs) => {
+  for (const config of configs) {
+    this.projectileSystem.fire(config)
   }
+})
+```
 
-  didUpdate(deltaTime, events, input) {
-    // ... 기존 코드
+**Step 4: didUpdate에 투사체 업데이트 추가**
 
-    // 투사체 업데이트
-    this.projectileSystem.update(deltaTime)
+didUpdate 중간에 추가 (removeDeadEnemies 전):
+```javascript
+// 투사체 업데이트
+if (this.projectileSystem) {
+  this.projectileSystem.update(deltaTime)
 
-    // 플레이어 투사체 충돌 체크 (적 대상)
-    const enemies = this.objects.filter(obj => obj.tags.has('enemy'))
-    const enemyTargets = enemies.map(e => ({
-      ...e,
-      isEnemy: true,
-      radius: 16
-    }))
-    this.projectileSystem.checkCollisions(enemyTargets, 'player')
+  // 적 대상 충돌 체크
+  const enemies = this.objects.filter(obj => obj.tags.has('enemy'))
+  const enemyTargets = enemies.map(e => ({
+    position: e.position,
+    findComponent: e.findComponent.bind(e),
+    tags: e.tags,
+    isEnemy: true,
+    radius: 16,
+    expReward: e.expReward
+  }))
+  this.projectileSystem.checkCollisions(enemyTargets, 'player')
 
-    // 적 투사체 충돌 체크 (플레이어 대상)
-    const playerTarget = [{
-      ...this.player,
-      isPlayer: true,
-      radius: 16
-    }]
-    this.projectileSystem.checkCollisions(playerTarget, 'enemy')
+  // 플레이어 대상 충돌 체크
+  const playerTarget = [{
+    position: this.player.position,
+    findComponent: this.player.findComponent.bind(this.player),
+    tags: this.player.tags,
+    isPlayer: true,
+    radius: 16
+  }]
+  this.projectileSystem.checkCollisions(playerTarget, 'enemy')
+}
 
-    // 플레이어 방향 업데이트
-    this.updatePlayerFacingDirection(input)
-  }
+// 플레이어 방향 업데이트
+this.updatePlayerFacingDirection()
+```
 
-  updatePlayerFacingDirection(input) {
-    const playerController = this.player.findComponent(PlayerController)
-    const attackController = this.player.findComponent(AttackController)
+**Step 5: updatePlayerFacingDirection 메서드 추가**
 
-    if (playerController && attackController) {
-      const dir = playerController.direction
-      if (dir[0] !== 0 || dir[1] !== 0) {
-        attackController.setFacingDirection(dir[0], dir[1])
-      }
-    }
-  }
+```javascript
+updatePlayerFacingDirection() {
+  const playerController = this.player.findComponent(PlayerController)
+  const attackController = this.player.findComponent(AttackController)
 
-  onProjectileHit(data) {
-    const { projectile, target, damage } = data
-
-    const targetStats = target.findComponent?.(Stats)
-    if (targetStats && targetStats.alive) {
-      targetStats.takeDamage(damage)
-
-      // 피격 효과
-      const renderer = target.findComponent?.(ShapeRenderer)
-      if (renderer) {
-        renderer.flash('#ffffff', 0.1)
-      }
-
-      // 사망 처리
-      if (!targetStats.alive && target.tags?.has('enemy')) {
-        const playerStats = this.player.findComponent(Stats)
-        playerStats.addExp(target.expReward || 10)
-      }
-    }
-  }
-
-  didRender(context, screen, camera) {
-    // ... 기존 렌더링
-
-    // 투사체 렌더링 (카메라 변환 적용 후)
-    context.save()
-    camera.apply(context)
-    this.projectileRenderer.render(context, this.projectileSystem.getActiveProjectiles())
-    context.restore()
-  }
-
-  // playerAttack 메서드 수정
-  playerAttack() {
-    const attackController = this.player.findComponent(AttackController)
-    const enemies = this.objects.filter(obj => obj.tags.has('enemy'))
-
-    const results = attackController.attack(enemies)
-
-    // 근접 공격 결과 처리
-    for (const result of results) {
-      if (result.type !== 'ranged') {
-        // 근접 공격 결과
-        console.log(`Hit ${result.target.name} for ${result.damage} damage`)
-
-        const renderer = result.target.findComponent(ShapeRenderer)
-        if (renderer) {
-          renderer.flash('#ffffff', 0.1)
-        }
-
-        const targetStats = result.target.findComponent(Stats)
-        if (!targetStats.alive) {
-          const playerStats = this.player.findComponent(Stats)
-          playerStats.addExp(result.target.expReward || 10)
-        }
-      }
-      // 원거리 공격은 이벤트로 처리됨
+  if (playerController && attackController) {
+    const dir = playerController.direction
+    if (dir[0] !== 0 || dir[1] !== 0) {
+      attackController.setFacingDirection(dir[0], dir[1])
     }
   }
 }
 ```
 
-**Step 2: 브라우저에서 확인**
+**Step 6: onProjectileHit 메서드 추가**
 
-Expected:
-- 활/지팡이 장착 시 투사체 발사
-- 투사체가 적에게 명중 시 데미지
-- 투사체 트레일 효과
+```javascript
+onProjectileHit(data) {
+  const { target, damage } = data
 
-**Step 3: Commit**
+  const targetStats = target.findComponent(Stats)
+  if (targetStats && targetStats.alive) {
+    targetStats.takeDamage(damage)
+
+    // 피격 효과
+    const renderer = target.findComponent(ShapeRenderer)
+    if (renderer) {
+      renderer.flash('#ffffff', 0.1)
+    }
+
+    // 사망 처리 (적인 경우)
+    if (!targetStats.alive && target.tags?.has('enemy')) {
+      const playerStats = this.player.findComponent(Stats)
+      playerStats.addExp(target.expReward || 10)
+    }
+  }
+}
+```
+
+**Step 7: handleRangedAttack 제거 또는 주석 처리**
+
+기존 `handleRangedAttack` 메서드는 이제 불필요 - 제거하거나 주석 처리
+
+**Step 8: didRender 메서드 추가 (투사체 렌더링)**
+
+```javascript
+didRender(context, screen) {
+  // 투사체 렌더링
+  if (this.projectileRenderer && this.projectileSystem) {
+    context.save()
+    if (this.camera) {
+      this.camera.apply(context)
+    }
+    this.projectileRenderer.render(context, this.projectileSystem.getActiveProjectiles())
+    context.restore()
+  }
+}
+```
+
+**Step 9: 브라우저에서 확인**
+
+1. 단궁 장착 후 공격 - 투사체 발사 확인
+2. 마법 지팡이 장착 - 2발 동시 발사 확인
+3. 투사체 적 명중 시 데미지 확인
+
+**Step 10: Commit**
 
 ```bash
-git add examples/mini-rpg/scripts/
+git add examples/mini-rpg/scripts/scenes/game-scene.js
 git commit -m "feat(mini-rpg): GameScene에 투사체 시스템 통합"
 ```
 
