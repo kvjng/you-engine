@@ -28,6 +28,7 @@ export function createPlayer(x, y) {
   })
 
   player.position = [x, y]
+  player.tags.add('player')
 
   // Equipment 변경 시 Stats에 보너스 적용
   const equipment = player.findComponent(Equipment)

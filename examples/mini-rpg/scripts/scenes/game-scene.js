@@ -96,6 +96,28 @@ export class GameScene extends Scene {
         this.projectileSystem.fire(config)
       }
     })
+
+    // 시작 아이템 지급
+    this.giveStarterItems()
+  }
+
+  giveStarterItems() {
+    if (!this.itemManager) return
+
+    const inventory = this.player.findComponent(Inventory)
+    const starterItems = [
+      { id: 'bow_short', count: 1 },
+      { id: 'staff_magic', count: 1 },
+      { id: 'sword_wood', count: 1 },
+      { id: 'potion_hp_small', count: 3 }
+    ]
+
+    for (const item of starterItems) {
+      const itemData = this.itemManager.getItem(item.id)
+      if (itemData) {
+        inventory.addItem(item.id, item.count, itemData)
+      }
+    }
   }
 
   spawnStructures(count = 30) {
