@@ -145,3 +145,69 @@
   "respawnInterval": 5
 }
 ```
+
+---
+
+## 5. Phase 4 상세: NPC/대화 시스템
+
+### 5.1 NPC 오브젝트
+
+**NPC 구조**:
+- `NPC` 오브젝트 + `NPCBehavior` 컴포넌트
+- 속성: id, name, dialogueId, shopId (상점 NPC인 경우)
+- Tiled 오브젝트 레이어에서 배치
+
+**상호작용**:
+- 플레이어 접근 시 말풍선 아이콘 표시 ("!" 또는 "...")
+- E키로 대화 시작
+- 상호작용 범위: 약 50px
+
+### 5.2 대화 시스템
+
+**대화 UI**:
+- 화면 하단 텍스트 박스
+- NPC 이름, 대화 내용 표시
+- 스페이스/E키로 다음 대화, ESC로 종료
+
+**대화 데이터 구조**:
+```json
+{
+  "dialogueId": "elder_intro",
+  "lines": [
+    { "speaker": "촌장", "text": "어서 오게, 젊은 용사여." },
+    { "speaker": "촌장", "text": "우리 마을에 큰 위협이 닥쳤다네..." }
+  ],
+  "onComplete": { "action": "startQuest", "questId": "main_01" }
+}
+```
+
+**분기 대화** (선택지):
+- `choices` 배열로 선택지 제공
+- 선택에 따라 다른 dialogueId로 이동
+
+### 5.3 상점 시스템
+
+**화폐**:
+- 골드 단일 화폐
+- 몬스터 드롭, 퀘스트 보상으로 획득
+
+**상점 UI**:
+- 구매/판매 탭
+- 아이템 목록, 가격 표시
+- 플레이어 소지 골드 표시
+
+**상점 데이터**:
+```json
+{
+  "shopId": "village_weapon",
+  "name": "무기 상점",
+  "items": [
+    { "itemId": "sword_iron", "price": 100 },
+    { "itemId": "bow_wood", "price": 80 }
+  ]
+}
+```
+
+**구현 요소**:
+- `ShopUI` 클래스
+- 플레이어 골드: `Stats` 또는 별도 `Wallet` 컴포넌트
