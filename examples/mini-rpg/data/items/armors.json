@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "id": "armor_cloth",
+      "name": "천 갑옷",
+      "type": "armor",
+      "slot": "armor",
+      "stackable": false,
+      "stats": {
+        "defense": 3
+      },
+      "description": "가벼운 천으로 만든 갑옷."
+    },
+    {
+      "id": "armor_leather",
+      "name": "가죽 갑옷",
+      "type": "armor",
+      "slot": "armor",
+      "stackable": false,
+      "stats": {
+        "defense": 6
+      },
+      "description": "질긴 가죽으로 만든 갑옷."
+    },
+    {
+      "id": "armor_iron",
+      "name": "철 갑옷",
+      "type": "armor",
+      "slot": "armor",
+      "stackable": false,
+      "stats": {
+        "defense": 10
+      },
+      "description": "무거운 철 갑옷."
+    }
+  ]
+}

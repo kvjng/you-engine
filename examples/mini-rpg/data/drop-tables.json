@@ -1,0 +1,29 @@
+{
+  "tables": {
+    "mushroom": {
+      "drops": [
+        { "itemId": "potion_small", "chance": 0.3, "minCount": 1, "maxCount": 1 }
+      ]
+    },
+    "ant": {
+      "drops": [
+        { "itemId": "potion_small", "chance": 0.2, "minCount": 1, "maxCount": 1 }
+      ]
+    },
+    "common_monster": {
+      "drops": [
+        { "itemId": "potion_small", "chance": 0.25, "minCount": 1, "maxCount": 2 },
+        { "itemId": "sword_wood", "chance": 0.05, "minCount": 1, "maxCount": 1 },
+        { "itemId": "armor_cloth", "chance": 0.05, "minCount": 1, "maxCount": 1 }
+      ]
+    },
+    "rare_monster": {
+      "drops": [
+        { "itemId": "potion_medium", "chance": 0.3, "minCount": 1, "maxCount": 1 },
+        { "itemId": "sword_iron", "chance": 0.1, "minCount": 1, "maxCount": 1 },
+        { "itemId": "armor_leather", "chance": 0.1, "minCount": 1, "maxCount": 1 },
+        { "itemId": "ring_agility", "chance": 0.03, "minCount": 1, "maxCount": 1 }
+      ]
+    }
+  }
+}

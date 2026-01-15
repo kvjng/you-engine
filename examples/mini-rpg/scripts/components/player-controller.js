@@ -1,13 +1,20 @@
 import { Component } from '../../../../you/component.js'
 import { Collider } from './collider.js'
+import { Stats } from './stats.js'
 
 export class PlayerController extends Component {
   constructor({ speed = 150, bounds = null, radius = 16 } = {}) {
     super()
-    this.speed = speed
+    this.baseSpeed = speed
     this.direction = [0, 0]
     this.bounds = bounds // { minX, minY, maxX, maxY }
     this.radius = radius
+  }
+
+  get speed() {
+    const stats = this.object?.findComponent(Stats)
+    const multiplier = stats?.speedMultiplier || 1
+    return this.baseSpeed * multiplier
   }
 
   setBounds(minX, minY, maxX, maxY) {
